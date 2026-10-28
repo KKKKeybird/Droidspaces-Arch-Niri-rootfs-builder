@@ -2,6 +2,7 @@
 # Base is created in GitHub Actions from a pinned upstream commit.
 ARG BASE_IMAGE=droidspaces-debian13-niri:base
 FROM debian:trixie AS ghostty-builder
+COPY debian13/scripts/progress.sh /usr/local/bin/ds-progress
 ARG ENABLE_GHOSTTY=true
 ARG GHOSTTY_VERSION=1.3.1
 ARG ZIG_VERSION=0.15.2
@@ -13,20 +14,24 @@ RUN if [ "$ENABLE_GHOSTTY" = "true" ]; then \
       mkdir -p /opt/zig && tar -xf /tmp/zig.tar.xz -C /opt/zig --strip-components=1 && \
       curl -fL --retry 3 "https://release.files.ghostty.org/${GHOSTTY_VERSION}/ghostty-${GHOSTTY_VERSION}.tar.gz" -o /tmp/ghostty.tar.gz && \
       mkdir -p /tmp/ghostty-src && tar -xf /tmp/ghostty.tar.gz -C /tmp/ghostty-src --strip-components=1 && \
-      cd /tmp/ghostty-src && /opt/zig/zig build -p /usr/local -Doptimize=ReleaseFast -Dcpu=baseline && \
+      cd /tmp/ghostty-src && \
+      bash /usr/local/bin/ds-progress run "Ghostty Zig compile" 20 \
+        timeout -k 20s 2400s /opt/zig/zig build -p /usr/local -Doptimize=ReleaseFast -Dcpu=baseline && \
       test -x /usr/local/bin/ghostty; \
     fi
 
 # Compile the Arch AUR Reef package from its real upstream source on ARM64.
-# Debian 13 Rust toolchain supports the project's Rust 2024 edition.
+# Reef uses Rust 2024 + let chains. Compile under newer Rust, keep Debian runtime.
 FROM rust:1.90-trixie AS reef-builder
+COPY debian13/scripts/progress.sh /usr/local/bin/ds-progress
 ARG REEF_COMMIT=028f731b84e0beb0a59c73fb84ac3e415c36c7d7
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates git pkg-config && \
     rustc --version && \
     git clone https://github.com/ZStud/reef /tmp/reef && \
     cd /tmp/reef && git checkout "${REEF_COMMIT}" && \
-    cargo build --locked --release && \
+    bash /usr/local/bin/ds-progress run "Reef Cargo release compile" 20 \
+      timeout -k 20s 1200s cargo build --locked --release && \
     test -x /tmp/reef/target/release/reef
 
 FROM ${BASE_IMAGE} AS customizer

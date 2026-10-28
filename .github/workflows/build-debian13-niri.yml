@@ -25,6 +25,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: debian13-niri-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-24.04-arm
@@ -46,8 +50,10 @@ jobs:
           uname -m
           test "$(uname -m)" = aarch64
           bash -n fork/debian13/scripts/*.sh
+          bash fork/debian13/scripts/progress.sh stage 0 6 "starting builds"
           test -f upstream/Debian-13.Dockerfile
-      - name: Build upstream Debian 13 + patched Anland Niri base
+      - name: "[1/6] Debian 13 + Anland Niri base"
+
         run: |
           docker build --progress=plain --platform linux/arm64 \
             -f upstream/Debian-13.Dockerfile --target customizer \
@@ -67,20 +73,52 @@ jobs:
             --build-arg ENABLE_8gen2_wayland_ARG=false \
             --build-arg ENABLE_systemd257_ARG=false \
             -t droidspaces-debian13-niri:base upstream
-      - name: Build full Debian 13 overlay and export rootfs
+          bash fork/debian13/scripts/progress.sh stage 1 6 "Debian 13 base ready"
+      - name: "[2/6] Ghostty ARM64 / Zig source build"
+        run: |
+          docker build --progress=plain --platform linux/arm64 \
+            -f fork/debian13/Dockerfile --target ghostty-builder \
+            --build-arg ENABLE_GHOSTTY="${{ github.event_name == 'push' && 'true' || (inputs.ghostty && 'true' || 'false') }}" \
+            -t droidspaces-ghostty:builder fork
+          bash fork/debian13/scripts/progress.sh stage 2 6 "Ghostty compiled"
+      - name: "[3/6] Reef ARM64 / Cargo source build"
+        run: |
+          docker build --progress=plain --platform linux/arm64 \
+            -f fork/debian13/Dockerfile --target reef-builder \
+            -t droidspaces-reef:builder fork
+          bash fork/debian13/scripts/progress.sh stage 3 6 "Reef compiled"
+      - name: "[4/6] Debian overlay + Niri config validation"
         run: |
           mkdir -p out/rootfs
-          docker buildx build --progress=plain --platform linux/arm64 \
+          docker build --progress=plain --platform linux/arm64 \
+            -f fork/debian13/Dockerfile --target customizer \
+            --build-arg BASE_IMAGE=droidspaces-debian13-niri:base \
+            --build-arg USERNAME="${{ inputs.username || 'colle' }}" \
+            --build-arg ENABLE_GHOSTTY="${{ github.event_name == 'push' && 'true' || (inputs.ghostty && 'true' || 'false') }}" \
+            --build-arg ENABLE_RIME="${{ github.event_name == 'push' && 'true' || (inputs.rime && 'true' || 'false') }}" \
+            -t droidspaces-debian13-niri:final fork
+          bash fork/debian13/scripts/progress.sh stage 4 6 "Desktop overlay validated"
+      - name: "[5/6] Export and compress rootfs"
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq pv
+          mkdir -p out/rootfs
+          # Stage already built above; this normally reuses Docker BuildKit cache.
+          docker build --progress=plain --platform linux/arm64 \
             -f fork/debian13/Dockerfile --target export \
             --build-arg BASE_IMAGE=droidspaces-debian13-niri:base \
             --build-arg USERNAME="${{ inputs.username || 'colle' }}" \
             --build-arg ENABLE_GHOSTTY="${{ github.event_name == 'push' && 'true' || (inputs.ghostty && 'true' || 'false') }}" \
             --build-arg ENABLE_RIME="${{ github.event_name == 'push' && 'true' || (inputs.rime && 'true' || 'false') }}" \
             --output type=local,dest=out/rootfs fork
-          sudo tar --numeric-owner --xattrs -C out/rootfs -cJf \
-            out/droidspaces-debian13-niri-arm64.tar.xz .
+          # pv reports compression input bytes processed; percentage is based on
+          # approximate uncompressed file bytes (not compressed output).
+          total_bytes="$(du -sb out/rootfs | awk '{print $1}')"
+          sudo tar --numeric-owner --xattrs -C out/rootfs -cf - . \
+            | pv -f -i 10 -s "$total_bytes" -N 'RootFS tar' \
+            | xz -T0 -1 -c > out/droidspaces-debian13-niri-arm64.tar.xz
           sha256sum out/droidspaces-debian13-niri-arm64.tar.xz > out/SHA256SUMS
-      - name: Upload rootfs to Actions artifacts
+          bash fork/debian13/scripts/progress.sh stage 5 6 "RootFS exported and compressed"
+      - name: "[6/6] Upload rootfs to Actions artifacts"
         uses: actions/upload-artifact@v4
         with:
           name: droidspaces-debian13-niri-arm64
@@ -89,6 +127,9 @@ jobs:
             out/SHA256SUMS
           compression-level: 0
           if-no-files-found: error
+      - name: Finish progress summary
+        if: success()
+        run: bash fork/debian13/scripts/progress.sh stage 6 6 "Artifact uploaded"
       - name: Create release on request
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_release }}
         env:

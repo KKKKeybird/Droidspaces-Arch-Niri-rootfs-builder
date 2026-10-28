@@ -194,19 +194,22 @@ cp -a /tmp/tide-v6/completions/. /etc/skel/.config/fish/completions/
 cp -a /etc/skel/.config/fish/. "${home_dir}/.config/fish/"
 chown -R "${USERNAME}:${USERNAME}" "${home_dir}/.config/fish"
 
-# Generate universal variables in an *isolated* Fish config directory.
-# --no-config avoids Tide's event handlers while >100 set -U commands run.
-# Persist generated fish_variables into the actual user's config afterwards.
-echo "[overlay] generating Tide variables in a clean noninteractive fish session"
-install -d -m700 -o "${USERNAME}" -g "${USERNAME}" /tmp/ds-tide-uvars/fish
-timeout -k 5s 120s runuser -u "${USERNAME}" -- env \
-  HOME="${home_dir}" XDG_CONFIG_HOME=/tmp/ds-tide-uvars \
-  fish --no-config "${home_dir}/.config/fish/tide-apply.fish"
-test -s /tmp/ds-tide-uvars/fish/fish_variables
-install -m600 -o "${USERNAME}" -g "${USERNAME}" \
-  /tmp/ds-tide-uvars/fish/fish_variables "${home_dir}/.config/fish/fish_variables"
-rm -rf /tmp/ds-tide-uvars /tmp/tide-v6
-echo "[overlay] Tide preconfiguration finished"
+# Original tide-apply.fish uses universal variables, but Fish --no-config in
+# Docker has unreliable persistence of the fish_variables file. Preserve
+# identical values as global variables loaded at interactive Fish startup.
+# Prefix 00- ensures these are loaded before Tide's _tide_init.fish.
+echo "[overlay] installing declarative Tide theme; no fish process needed"
+sed -E 's/^set -U /set -g /' \
+  /tmp/arch-preset/terminal/fish/tide-apply.fish \
+  | sed '/^echo /d' \
+  > /etc/skel/.config/fish/conf.d/00-droidspaces-tide.fish
+test -s /etc/skel/.config/fish/conf.d/00-droidspaces-tide.fish
+install -m644 /etc/skel/.config/fish/conf.d/00-droidspaces-tide.fish \
+  "${home_dir}/.config/fish/conf.d/00-droidspaces-tide.fish"
+chown "${USERNAME}:${USERNAME}" \
+  "${home_dir}/.config/fish/conf.d/00-droidspaces-tide.fish"
+rm -rf /tmp/tide-v6
+echo "[overlay] Tide theme configuration installed"
 chsh -s /usr/bin/fish "${USERNAME}"
 echo "[overlay] Fish selected as default shell"
 

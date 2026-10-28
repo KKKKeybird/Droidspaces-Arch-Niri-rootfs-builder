@@ -34,3 +34,17 @@ Import the artifact archive as an ARM64 rootfs into a **new container**. Keep th
 - [Debian base and niri-anland installer](https://github.com/Goldzxcbug/Droidspaces-rootfs-Desktop-builder)
 - [Noctalia APT installation](https://docs.noctalia.dev/noctalia/getting-started/installation/)
 - [Ghostty build docs](https://ghostty.org/docs/install/build)
+
+## Live build progress
+
+CI splits the build into six named GitHub Actions steps (base, Ghostty,
+Reef, overlay, export, upload). Zig and Cargo stages emit a moving
+*indeterminate* pulse and elapsed runtime every 20 seconds. No fake
+compiler percentage is shown. Compression uses `pv` to display input
+bytes processed. On every push, the workflow cancels older builds of
+this branch to avoid wasting ARM64 runner minutes.
+
+Fish/Tide now applies theme defaults from
+`~/.config/fish/conf.d/00-droidspaces-tide.fish`, preserving the original
+theme values while avoiding the previous build-time universal variable
+initialization failure. Edit this file to customize persistent defaults.
