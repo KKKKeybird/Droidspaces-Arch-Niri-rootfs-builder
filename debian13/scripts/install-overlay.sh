@@ -180,10 +180,35 @@ cp -a /etc/skel/.config/. "${home_dir}/.config/"
 if [[ -d /etc/skel/.local ]]; then cp -a /etc/skel/.local/. "${home_dir}/.local/"; fi
 chown -R "${USERNAME}:${USERNAME}" "${home_dir}/.config" "${home_dir}/.local"
 
-# Fisher/Tide and source profile are installed as the actual user, not root.
-runuser -u "${USERNAME}" -- env HOME="${home_dir}" fish -c 'fisher install ilancosman/tide@v6'
-runuser -u "${USERNAME}" -- env HOME="${home_dir}" fish "${home_dir}/.config/fish/tide-apply.fish"
+# Install Tide v6 directly into skeleton, without executing Fisher inside
+# Docker build. This prevents a blocked Fish plugin installer from freezing CI.
+# The Fisher command remains installed in functions/ for user's future use.
+echo "[overlay] installing Tide v6 (direct copy; no interactive plugin manager)"
+timeout -k 5s 90s git clone --depth=1 --branch v6 \
+  https://github.com/IlanCosman/tide /tmp/tide-v6
+install -d /etc/skel/.config/fish/functions \
+  /etc/skel/.config/fish/conf.d /etc/skel/.config/fish/completions
+cp -a /tmp/tide-v6/functions/. /etc/skel/.config/fish/functions/
+cp -a /tmp/tide-v6/conf.d/. /etc/skel/.config/fish/conf.d/
+cp -a /tmp/tide-v6/completions/. /etc/skel/.config/fish/completions/
+cp -a /etc/skel/.config/fish/. "${home_dir}/.config/fish/"
+chown -R "${USERNAME}:${USERNAME}" "${home_dir}/.config/fish"
+
+# Generate universal variables in an *isolated* Fish config directory.
+# --no-config avoids Tide's event handlers while >100 set -U commands run.
+# Persist generated fish_variables into the actual user's config afterwards.
+echo "[overlay] generating Tide variables in a clean noninteractive fish session"
+install -d -m700 -o "${USERNAME}" -g "${USERNAME}" /tmp/ds-tide-uvars/fish
+timeout -k 5s 120s runuser -u "${USERNAME}" -- env \
+  HOME="${home_dir}" XDG_CONFIG_HOME=/tmp/ds-tide-uvars \
+  fish --no-config "${home_dir}/.config/fish/tide-apply.fish"
+test -s /tmp/ds-tide-uvars/fish/fish_variables
+install -m600 -o "${USERNAME}" -g "${USERNAME}" \
+  /tmp/ds-tide-uvars/fish/fish_variables "${home_dir}/.config/fish/fish_variables"
+rm -rf /tmp/ds-tide-uvars /tmp/tide-v6
+echo "[overlay] Tide preconfiguration finished"
 chsh -s /usr/bin/fish "${USERNAME}"
+echo "[overlay] Fish selected as default shell"
 
 # Use the base builder's systemd desktop-session.service. It launches niri-anland
 # with its established Anland vars; do not create a second competing niri.service.
