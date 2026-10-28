@@ -6,13 +6,13 @@ The workflow starts from a pinned [Goldzxcbug Droidspaces Debian 13 builder](htt
 
 ## Build
 
-Actions → **Build Debian 13 ARM64 Niri + Noctalia RootFS** → Run workflow. Runs on native `ubuntu-24.04-arm`; builds optional Ghostty from the official source tarball with Zig 0.15.2; exports a `.tar.xz` artifact and SHA256SUMS. It does not need to compile on your phone.
+Actions → **Build Debian 13 ARM64 Niri + Noctalia RootFS** → Run workflow. Runs on native `ubuntu-24.04-arm`; fetches the latest compatible Ghostty Debian 13 ARM64 .deb from mkasberg/ghostty-ubuntu Releases and verifies GitHub-published SHA256; exports a `.tar.xz` artifact and SHA256SUMS. It does not need to compile on your phone.
 
 ## Features
 
 - Debian 13 / systemd 257 (no Arch systemd replacement or pacman)
 - niri-anland / Anland Wayland, Noctalia (APT), Fuzzel
-- Ghostty 1.3.1 compiled on Actions (default), Kitty fallback, Nemo
+- Ghostty latest available Trixie ARM64 prebuilt .deb (GitHub SHA256 verified), Kitty fallback, Nemo
 - Fish + Fisher + Tide + Reef and Reef Tools (built from pinned Rust source), with eza/bat/rg/fd/zoxide, original presets and Catppuccin Frappe
 - Fcitx5 + Rime Ice, CJK fonts and Maple Mono NF CN
 - Fastfetch, Neovim, GVfs, PipeWire, WirePlumber
@@ -33,11 +33,11 @@ Import the artifact archive as an ARM64 rootfs into a **new container**. Keep th
 - [Arch Niri source/presets](https://github.com/collegeming/Droidspaces-Arch-Niri-rootfs-builder)
 - [Debian base and niri-anland installer](https://github.com/Goldzxcbug/Droidspaces-rootfs-Desktop-builder)
 - [Noctalia APT installation](https://docs.noctalia.dev/noctalia/getting-started/installation/)
-- [Ghostty build docs](https://ghostty.org/docs/install/build)
+- [Ghostty Debian ARM64 release packages](https://github.com/mkasberg/ghostty-ubuntu/releases) (community-maintained; GitHub asset digest verified)
 
 ## Live build progress
 
-CI splits the build into six named GitHub Actions steps (base, Ghostty,
+CI splits the build into six named GitHub Actions steps (base, Ghostty package download,
 Reef, overlay, export, upload). Zig and Cargo stages emit a moving
 *indeterminate* pulse and elapsed runtime every 20 seconds. No fake
 compiler percentage is shown. Compression uses `pv` to display input
@@ -48,3 +48,7 @@ Fish/Tide now applies theme defaults from
 `~/.config/fish/conf.d/00-droidspaces-tide.fish`, preserving the original
 theme values while avoiding the previous build-time universal variable
 initialization failure. Edit this file to customize persistent defaults.
+
+## Ghostty version selection
+
+Each new Actions run resolves the newest published release **containing a Debian 13 Trixie arm64 .deb**, queries release metadata, validates its SHA256 asset digest, and verifies the downloaded Debian package architecture and package name. If the latest upstream Ghostty version has no compatible prebuilt package yet, the workflow uses the latest packaged version instead. The chosen release tag and SHA256 are recorded in `/usr/share/doc/droidspaces-debian-niri/GHOSTTY-SOURCE.txt` inside the rootfs. Trusting the third-party packager remains necessary.

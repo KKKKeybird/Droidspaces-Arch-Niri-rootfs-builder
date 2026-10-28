@@ -7,7 +7,7 @@ on:
         type: string
         default: colle
       ghostty:
-        description: Compile Ghostty 1.3.1 on ARM64
+        description: Install latest verified Ghostty Debian 13 ARM64 package
         type: boolean
         default: true
       rime:
@@ -74,13 +74,13 @@ jobs:
             --build-arg ENABLE_systemd257_ARG=false \
             -t droidspaces-debian13-niri:base upstream
           bash fork/debian13/scripts/progress.sh stage 1 6 "Debian 13 base ready"
-      - name: "[2/6] Ghostty ARM64 / Zig source build"
+      - name: "[2/6] Latest compatible Ghostty ARM64 .deb"
         run: |
           docker build --progress=plain --platform linux/arm64 \
             -f fork/debian13/Dockerfile --target ghostty-builder \
             --build-arg ENABLE_GHOSTTY="${{ github.event_name == 'push' && 'true' || (inputs.ghostty && 'true' || 'false') }}" \
             -t droidspaces-ghostty:builder fork
-          bash fork/debian13/scripts/progress.sh stage 2 6 "Ghostty compiled"
+          bash fork/debian13/scripts/progress.sh stage 2 6 "Ghostty .deb selected and verified"
       - name: "[3/6] Reef ARM64 / Cargo source build"
         run: |
           docker build --progress=plain --platform linux/arm64 \

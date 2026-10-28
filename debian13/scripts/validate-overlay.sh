@@ -19,7 +19,7 @@ command -v fish
 command -v nemo
 command -v fcitx5
 command -v fuzzel
-if [[ "${ENABLE_GHOSTTY:-true}" == true ]]; then test -x /usr/local/bin/ghostty; fi
+if [[ "${ENABLE_GHOSTTY:-true}" == true ]]; then command -v ghostty >/dev/null && test "$(dpkg-query -W -f='${Architecture}' ghostty)" = arm64; fi
 if [[ "${ENABLE_NOCTALIA:-true}" == true ]]; then command -v noctalia; fi
 /usr/bin/niri-anland validate --config /etc/skel/.config/niri/config.kdl
 echo "Debian 13 ARM64 Niri overlay preflight passed (device runtime not tested)."

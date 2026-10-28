@@ -47,7 +47,12 @@ if [[ "${ENABLE_NOCTALIA}" == true ]]; then
 fi
 
 if [[ "${ENABLE_GHOSTTY}" == true ]]; then
-  installed_default ghostty || { echo "Ghostty builder produced no binary" >&2; exit 1; }
+  echo "[overlay] installing verified Debian 13 ARM64 Ghostty .deb"
+  test -s /tmp/ghostty.deb
+  apt-get install -y --no-install-recommends /tmp/ghostty.deb
+  installed_default ghostty || { echo "Ghostty package did not install the binary" >&2; exit 1; }
+  test "$(dpkg-query -W -f='${Architecture}' ghostty)" = arm64
+  dpkg-query -W -f='[overlay] Ghostty installed: ${Package} ${Version} (${Architecture})\n' ghostty
 fi
 
 # Original Arch preset files remain unchanged at their source path.
