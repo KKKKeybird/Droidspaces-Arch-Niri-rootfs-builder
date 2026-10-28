@@ -16,6 +16,7 @@ apt-get update
 apt-get install -y --no-install-recommends \
  fish kitty fuzzel nemo nemo-fileroller cinnamon-translations \
  neovim fastfetch git curl wget unzip xz-utils zip p7zip-full \
+ eza bat ripgrep fd-find zoxide \
  jq sudo dbus-user-session dbus-x11 xdg-utils xdg-user-dirs \
  fcitx5 fcitx5-rime fcitx5-config-qt \
  fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji \
@@ -23,6 +24,10 @@ apt-get install -y --no-install-recommends \
  pipewire wireplumber upower wl-clipboard \
  libgtk-4-1 libadwaita-1-0 libgtk4-layer-shell0 \
  ca-certificates
+
+# Debian command names differ from Arch for two Reef Tools dependencies.
+if command -v batcat >/dev/null 2>&1; then ln -sf /usr/bin/batcat /usr/local/bin/bat; fi
+if command -v fdfind >/dev/null 2>&1; then ln -sf /usr/bin/fdfind /usr/local/bin/fd; fi
 
 # Debian 13 has systemd 257; never copy Arch's systemd binaries or pacman locks.
 systemd_major="$(systemctl --version | head -n1 | awk '{print $2}')"

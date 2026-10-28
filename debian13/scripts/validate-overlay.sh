@@ -10,7 +10,18 @@ test -f /etc/skel/.config/fish/config.fish
 test -f /etc/skel/.config/fastfetch/config.jsonc
 test -f /etc/droidspaces-desktop.conf
 grep -q '^DESKTOP=niri$' /etc/droidspaces-desktop.conf
-grep -q '^DISPLAY_BACKEND=anland-wayland$' /etc/droidspaces-desktop.conf
+grep -q '^DISPLAY_BACKEND=anland-wayland
+if [[ "${ENABLE_GHOSTTY:-true}" == true ]]; then test -x /usr/local/bin/ghostty; fi
+if [[ "${ENABLE_NOCTALIA:-true}" == true ]]; then command -v noctalia; fi
+test -x /usr/local/bin/reef
+command -v fish
+command -v nemo
+command -v fcitx5
+command -v fuzzel
+echo "Debian 13 ARM64 Niri overlay preflight passed (device-side runtime still untested)."
+ /etc/droidspaces-desktop.conf
+# Validate actual KDL against Debian\x27s patched Niri binary; no display required.
+/usr/bin/niri-anland validate --config /etc/skel/.config/niri/config.kdl
 if [[ "${ENABLE_GHOSTTY:-true}" == true ]]; then test -x /usr/local/bin/ghostty; fi
 if [[ "${ENABLE_NOCTALIA:-true}" == true ]]; then command -v noctalia; fi
 echo "Debian 13 ARM64 Niri overlay preflight passed (device-side runtime still untested)."

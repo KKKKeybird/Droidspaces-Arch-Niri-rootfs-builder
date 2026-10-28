@@ -13,7 +13,7 @@ Actions → **Build Debian 13 ARM64 Niri + Noctalia RootFS** → Run workflow. R
 - Debian 13 / systemd 257 (no Arch systemd replacement or pacman)
 - niri-anland / Anland Wayland, Noctalia (APT), Fuzzel
 - Ghostty 1.3.1 compiled on Actions (default), Kitty fallback, Nemo
-- Fish + Fisher + Tide + Reef and Reef Tools (built from pinned Rust source), original presets and Catppuccin Frappe
+- Fish + Fisher + Tide + Reef and Reef Tools (built from pinned Rust source), with eza/bat/rg/fd/zoxide, original presets and Catppuccin Frappe
 - Fcitx5 + Rime Ice, CJK fonts and Maple Mono NF CN
 - Fastfetch, Neovim, GVfs, PipeWire, WirePlumber
 - Original launcher and shortcuts are migrated from `scripts/niri/default-config.kdl`
