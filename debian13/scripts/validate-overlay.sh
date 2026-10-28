@@ -1,27 +1,25 @@
 #!/usr/bin/env bash
+# Static build-time checks only; hardware and systemd boot require a real device.
 set -euo pipefail
 test "$(dpkg --print-architecture)" = arm64
-test "$(grep -E '^VERSION_ID=' /etc/os-release | tr -d '"')" = VERSION_ID=13
-test "$(systemctl --version | head -1 | awk '{print $2}')" = 257
+grep -q '^VERSION_ID="\?13"\?$' /etc/os-release
+systemd_major="$(systemctl --version | head -n1 | awk '{print $2}')"
+[[ "${systemd_major}" =~ ^[0-9]+$ ]]
+(( systemd_major <= 257 ))
 test -x /usr/bin/niri-anland
 test -x /usr/local/bin/droidspaces-terminal
+test -x /usr/local/bin/reef
 test -f /etc/skel/.config/niri/config.kdl
 test -f /etc/skel/.config/fish/config.fish
 test -f /etc/skel/.config/fastfetch/config.jsonc
 test -f /etc/droidspaces-desktop.conf
-grep -q '^DESKTOP=niri$' /etc/droidspaces-desktop.conf
-grep -q '^DISPLAY_BACKEND=anland-wayland
-if [[ "${ENABLE_GHOSTTY:-true}" == true ]]; then test -x /usr/local/bin/ghostty; fi
-if [[ "${ENABLE_NOCTALIA:-true}" == true ]]; then command -v noctalia; fi
-test -x /usr/local/bin/reef
+grep -qx 'DESKTOP=niri' /etc/droidspaces-desktop.conf
+grep -qx 'DISPLAY_BACKEND=anland-wayland' /etc/droidspaces-desktop.conf
 command -v fish
 command -v nemo
 command -v fcitx5
 command -v fuzzel
-echo "Debian 13 ARM64 Niri overlay preflight passed (device-side runtime still untested)."
- /etc/droidspaces-desktop.conf
-# Validate actual KDL against Debian\x27s patched Niri binary; no display required.
-/usr/bin/niri-anland validate --config /etc/skel/.config/niri/config.kdl
 if [[ "${ENABLE_GHOSTTY:-true}" == true ]]; then test -x /usr/local/bin/ghostty; fi
 if [[ "${ENABLE_NOCTALIA:-true}" == true ]]; then command -v noctalia; fi
-echo "Debian 13 ARM64 Niri overlay preflight passed (device-side runtime still untested)."
+/usr/bin/niri-anland validate --config /etc/skel/.config/niri/config.kdl
+echo "Debian 13 ARM64 Niri overlay preflight passed (device runtime not tested)."
