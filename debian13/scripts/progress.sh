@@ -18,7 +18,7 @@ if [[ "${1:-}" == stage ]]; then
   if (( idx < 0 || total <= 0 || idx > total )); then exit 2; fi
   printf '[STAGE] [%s] %s/%s completed: %s\n' "$(bar "$idx" "$total")" "$idx" "$total" "$title"
   if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-    printf '- [%s/%s] %s ✅\n' "$idx" "$total" "$title" >> "$GITHUB_STEP_SUMMARY"
+    printf -- '- [%s/%s] %s ✅\n' "$idx" "$total" "$title" >> "$GITHUB_STEP_SUMMARY"
   fi
   exit 0
 fi
