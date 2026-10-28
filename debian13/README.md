@@ -13,7 +13,7 @@ Actions → **Build Debian 13 ARM64 Niri + Noctalia RootFS** → Run workflow. R
 - Debian 13 / systemd 257 (no Arch systemd replacement or pacman)
 - niri-anland / Anland Wayland, Noctalia (APT), Fuzzel
 - Ghostty 1.3.1 compiled on Actions (default), Kitty fallback, Nemo
-- Fish + Fisher + Tide, original presets and Catppuccin Frappe
+- Fish + Fisher + Tide + Reef and Reef Tools (built from pinned Rust source), original presets and Catppuccin Frappe
 - Fcitx5 + Rime Ice, CJK fonts and Maple Mono NF CN
 - Fastfetch, Neovim, GVfs, PipeWire, WirePlumber
 - Original launcher and shortcuts are migrated from `scripts/niri/default-config.kdl`
@@ -25,6 +25,8 @@ Actions → **Build Debian 13 ARM64 Niri + Noctalia RootFS** → Run workflow. R
 Import the artifact archive as an ARM64 rootfs into a **new container**. Keep the existing Artix container. Set up matching Anland APK/daemon for your device; bind `/data/local/tmp/display_daemon.sock` to `/run/display.sock`, enable the required GPU hardware access, and follow the upstream Anland security and SELinux guidance. In the container, `systemctl status desktop-session.service` and `/usr/bin/niri-anland` are the relevant entry points; do not use the Arch `niri.service`.
 
 **Important:** The upstream Debian builder uses an initial password `1234`. Change it immediately after import. A successful CI build checks file/package presence, **not** systemd boot, driver, graphics, audio, or 4.19 runtime compatibility.
+
+- [Reef source](https://github.com/ZStud/reef) (pinned commit `028f731b84e0beb0a59c73fb84ac3e415c36c7d7`)
 
 ## Provenance
 

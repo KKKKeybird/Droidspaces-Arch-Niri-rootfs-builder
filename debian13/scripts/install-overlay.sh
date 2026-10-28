@@ -63,15 +63,22 @@ curl -fL --retry 3 https://raw.githubusercontent.com/catppuccin/kitty/main/theme
 curl -fL --retry 3 https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish \
   -o /etc/skel/.config/fish/functions/fisher.fish
 
-# Reef is an Arch AUR-specific utility. Do not install an unverified Arch
-# binary on Debian. Preserve the config but guard invocation until it is ported.
-if ! installed_default reef; then
-  sed -i 's/^[[:space:]]*reef on 2>\/dev\/null/    command -q reef; and reef on 2>\/dev\/null/' \
+# Reef and reef-tools: compiled from upstream Rust source on the ARM64
+# GitHub Actions runner; Fish integration installed into system skeleton.
+if [[ "${ENABLE_REEF}" == true ]]; then
+  test -x /usr/local/bin/reef
+  for f in /tmp/reef-fish/functions/*.fish /tmp/reef-fish/functions/tools/*.fish; do
+    test -f "$f" || continue
+    install -m644 "$f" "/etc/skel/.config/fish/functions/$(basename "$f")"
+  done
+  for f in /tmp/reef-fish/conf.d/*.fish; do
+    test -f "$f" || continue
+    install -m644 "$f" "/etc/skel/.config/fish/conf.d/$(basename "$f")"
+  done
+else
+  # Keep the original interactive hook safe if Reef is explicitly disabled.
+  sed -i 's/^[[:space:]]*reef on 2>\\/dev\\/null/    command -q reef; and reef on 2>\\/dev\\/null/' \
     /etc/skel/.config/fish/conf.d/reef.fish
-  if [[ "${ENABLE_REEF}" == true ]]; then
-    echo "ENABLE_REEF=true requested, but no verified Debian-native Reef build is provided." >&2
-    exit 1
-  fi
 fi
 
 if [[ "${ENABLE_MAPLE_FONT}" == true ]]; then
@@ -181,6 +188,6 @@ fi
 printf '%s\n' "base=Goldzxcbug/Droidspaces-rootfs-Desktop-builder" \
   "distribution=Debian_13" "arch=arm64" "compositor=niri-anland" \
   "noctalia=${ENABLE_NOCTALIA}" "ghostty=${ENABLE_GHOSTTY}" \
-  "rime=${ENABLE_RIME}" "reef=unported" > /etc/droidspaces-debian-niri-provenance
+  "rime=${ENABLE_RIME}" "reef=${ENABLE_REEF}" > /etc/droidspaces-debian-niri-provenance
 apt-get clean
 rm -rf /var/lib/apt/lists/* /tmp/rime-ice /tmp/maple.zip /tmp/noctalia-keyring.deb

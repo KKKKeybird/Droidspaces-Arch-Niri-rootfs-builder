@@ -74,8 +74,8 @@ jobs:
             -f fork/debian13/Dockerfile --target export \
             --build-arg BASE_IMAGE=droidspaces-debian13-niri:base \
             --build-arg USERNAME="${{ inputs.username || 'colle' }}" \
-            --build-arg ENABLE_GHOSTTY="${{ inputs.ghostty == false && 'false' || 'true' }}" \
-            --build-arg ENABLE_RIME="${{ inputs.rime == false && 'false' || 'true' }}" \
+            --build-arg ENABLE_GHOSTTY="${{ github.event_name == 'push' && 'true' || (inputs.ghostty && 'true' || 'false') }}" \
+            --build-arg ENABLE_RIME="${{ github.event_name == 'push' && 'true' || (inputs.rime && 'true' || 'false') }}" \
             --output type=local,dest=out/rootfs fork
           sudo tar --numeric-owner --xattrs -C out/rootfs -cJf \
             out/droidspaces-debian13-niri-arm64.tar.xz .

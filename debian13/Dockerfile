@@ -17,16 +17,29 @@ RUN if [ "$ENABLE_GHOSTTY" = "true" ]; then \
       test -x /usr/local/bin/ghostty; \
     fi
 
+# Compile the Arch AUR Reef package from its real upstream source on ARM64.
+# Debian 13 Rust toolchain supports the project's Rust 2024 edition.
+FROM debian:trixie AS reef-builder
+ARG REEF_COMMIT=028f731b84e0beb0a59c73fb84ac3e415c36c7d7
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates git cargo rustc pkg-config && \
+    git clone https://github.com/ZStud/reef /tmp/reef && \
+    cd /tmp/reef && git checkout "${REEF_COMMIT}" && \
+    cargo build --locked --release && \
+    test -x /tmp/reef/target/release/reef
+
 FROM ${BASE_IMAGE} AS customizer
 ARG USERNAME=colle
 ARG ENABLE_GHOSTTY=true
 ARG ENABLE_RIME=true
 ARG ENABLE_NOCTALIA=true
 ARG ENABLE_MAPLE_FONT=true
-ARG ENABLE_REEF=false
+ARG ENABLE_REEF=true
 ARG NIRI_AUTOSTART=true
 ENV DEBIAN_FRONTEND=noninteractive
 COPY --from=ghostty-builder /usr/local/ /usr/local/
+COPY --from=reef-builder /tmp/reef/target/release/reef /usr/local/bin/reef
+COPY --from=reef-builder /tmp/reef/fish/ /tmp/reef-fish/
 COPY scripts/niri/default-config.kdl /tmp/arch-preset/default-config.kdl
 COPY scripts/terminal/ /tmp/arch-preset/terminal/
 COPY debian13/scripts/install-overlay.sh /usr/local/sbin/install-debian13-niri-overlay
