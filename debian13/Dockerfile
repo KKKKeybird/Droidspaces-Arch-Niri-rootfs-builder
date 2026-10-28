@@ -19,10 +19,11 @@ RUN if [ "$ENABLE_GHOSTTY" = "true" ]; then \
 
 # Compile the Arch AUR Reef package from its real upstream source on ARM64.
 # Debian 13 Rust toolchain supports the project's Rust 2024 edition.
-FROM debian:trixie AS reef-builder
+FROM rust:1.90-trixie AS reef-builder
 ARG REEF_COMMIT=028f731b84e0beb0a59c73fb84ac3e415c36c7d7
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates git cargo rustc pkg-config && \
+    ca-certificates git pkg-config && \
+    rustc --version && \
     git clone https://github.com/ZStud/reef /tmp/reef && \
     cd /tmp/reef && git checkout "${REEF_COMMIT}" && \
     cargo build --locked --release && \
