@@ -14,7 +14,7 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get update
 # Debian package equivalents for original Arch desktop/utilities.
 apt-get install -y --no-install-recommends \
- fish kitty fuzzel nemo nemo-fileroller cinnamon-translations \
+ fish kitty fuzzel nemo nemo-fileroller cinnamon-l10n \
  neovim fastfetch git curl wget unzip xz-utils zip p7zip-full \
  eza bat ripgrep fd-find zoxide \
  jq sudo dbus-user-session dbus-x11 xdg-utils xdg-user-dirs \
