@@ -98,25 +98,25 @@ jobs:
             --build-arg ENABLE_RIME="${{ github.event_name == 'push' && 'true' || (inputs.rime && 'true' || 'false') }}" \
             -t droidspaces-debian13-niri:final fork
           bash fork/debian13/scripts/progress.sh stage 4 6 "Desktop overlay validated"
-      - name: "[5/6] Export and compress rootfs"
+      - name: "[5/6] Stream Docker rootfs through xz with byte progress"
+        shell: bash
         run: |
+          set -euo pipefail
           sudo apt-get update -qq && sudo apt-get install -y -qq pv
-          mkdir -p out/rootfs
-          # Stage already built above; this normally reuses Docker BuildKit cache.
-          docker build --progress=plain --platform linux/arm64 \
-            -f fork/debian13/Dockerfile --target export \
-            --build-arg BASE_IMAGE=droidspaces-debian13-niri:base \
-            --build-arg USERNAME="${{ inputs.username || 'colle' }}" \
-            --build-arg ENABLE_GHOSTTY="${{ github.event_name == 'push' && 'true' || (inputs.ghostty && 'true' || 'false') }}" \
-            --build-arg ENABLE_RIME="${{ github.event_name == 'push' && 'true' || (inputs.rime && 'true' || 'false') }}" \
-            --output type=local,dest=out/rootfs fork
-          # pv reports compression input bytes processed; percentage is based on
-          # approximate uncompressed file bytes (not compressed output).
-          total_bytes="$(du -sb out/rootfs | awk '{print $1}')"
-          sudo tar --numeric-owner --xattrs -C out/rootfs -cf - . \
-            | pv -f -i 10 -s "$total_bytes" -N 'RootFS tar' \
-            | xz -T0 -1 -c > out/droidspaces-debian13-niri-arm64.tar.xz
+          mkdir -p out
+          # Reuse image produced in step 4, bypassing slow BuildKit local export.
+          image=droidspaces-debian13-niri:final
+          docker image inspect "$image" >/dev/null
+          echo "[rootfs] Streaming flattened filesystem from $image"
+          container_id="$(docker create "$image" /bin/true)"
+          trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' EXIT
+          bash fork/debian13/scripts/progress.sh run "Docker export + xz" 20 \
+            bash -c 'set -euo pipefail; docker export "$1" | pv -f -i 10 -t -b -r -N "RootFS bytes" | xz -T2 -1 -c > "$2"' \
+            _ "$container_id" "out/droidspaces-debian13-niri-arm64.tar.xz"
+          test -s out/droidspaces-debian13-niri-arm64.tar.xz
+          ls -lh out/droidspaces-debian13-niri-arm64.tar.xz
           sha256sum out/droidspaces-debian13-niri-arm64.tar.xz > out/SHA256SUMS
+          cat out/SHA256SUMS
           bash fork/debian13/scripts/progress.sh stage 5 6 "RootFS exported and compressed"
       - name: "[6/6] Upload rootfs to Actions artifacts"
         uses: actions/upload-artifact@v4
